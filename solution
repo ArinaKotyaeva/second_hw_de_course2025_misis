@@ -1,0 +1,83 @@
+//создание маппера
+%%writefile mapper1.py
+
+import sys
+
+for line in sys.stdin:
+    words = line.strip().split()
+    for word in words:
+        if len(word) > 4:
+            print(f"{word}\t1")
+
+
+
+//создание reducer
+%%writefile reducer1.py
+
+import sys
+
+current_word = None
+current_count = 0
+
+for line in sys.stdin:
+    word, count = line.strip().split('\t')
+    count = int(count)
+    
+    if word == current_word:
+        current_count += count
+    else:
+        if current_word is not None:
+            print(f"{current_word}\t{current_count}")
+        current_word = word
+        current_count = count
+
+if current_word is not None:
+    print(f"{current_word}\t{current_count}")
+
+
+!cat input.txt | python mapper1.py | sort | python reducer1.py > output.txt
+
+
+2
+
+%%writefile mapper2.py
+
+import sys
+
+for line in sys.stdin:
+    date_url, count = line.strip().split('\t')
+    print(f"{date_url}\t{count}")
+
+%%writefile reducer2.py
+
+import sys
+from collections import defaultdict
+
+data = defaultdict(list)
+
+for line in sys.stdin:
+    date_url, count = line.strip().split('\t')
+    count = int(count)
+    date, url = date_url.split('+')
+    data[date].append((url, count))
+
+for date in data:
+    sorted_sites = sorted(data[date], key=lambda x: x[1], reverse=True)[:5]
+    for url, count in sorted_sites:
+        print(f"{date}\t{url}\t{count}")
+
+!cat visits.txt | python mapper2.py | sort | python reducer2.py > output_visits.txt
+
+import sys
+import logging
+
+logging.basicConfig(filename='mapper1_error.log', level=logging.ERROR)
+
+for line in sys.stdin:
+    try:
+        words = line.strip().split()
+        for word in words:
+            if len(word) > 4:
+                print(f"{word}\t1")
+    except Exception as e:
+        logging.error(f"Error processing line: {line.strip()} | Exception: {str(e)}")
